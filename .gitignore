@@ -1,0 +1,32 @@
+# Python bytecode and caches
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Python virtual environments
+.venv/
+venv/
+env/
+
+# Environment variables
+.env
+.env.*
+
+# Logs
+*.log
+
+# Test/cache tooling
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Editor settings
+.vscode/
+
+# Node artifacts (if frontend tooling is added later)
+node_modules/
+
+# OS files
+.DS_Store
+Thumbs.db

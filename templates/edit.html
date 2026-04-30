@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Habit</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <main class="page-shell">
+        <header class="app-header">
+            <div>
+                <p class="eyebrow">Habit Settings</p>
+                <h1>Edit Habit</h1>
+            </div>
+            <p class="header-caption">Update details to keep your goals clear.</p>
+        </header>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <section class="flash-stack" aria-live="polite">
+                    {% for category, message in messages %}
+                        <div class="flash-message flash-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                </section>
+            {% endif %}
+        {% endwith %}
+
+        <section class="add-card">
+            <div class="section-head">
+                <h2>Habit Details</h2>
+                <span class="count-pill">ID {{ habit.id }}</span>
+            </div>
+
+            <form class="add-habit-form edit-form" action="{{ url_for('edit_habit', id=habit.id) }}" method="post">
+                <div class="field">
+                    <label for="name">Habit Name</label>
+                    <input id="name" name="name" type="text" value="{{ habit.name }}" required>
+                </div>
+
+                <div class="field">
+                    <label for="description">Description</label>
+                    <textarea id="description" name="description" rows="4">{{ habit.description or '' }}</textarea>
+                </div>
+
+                <input type="hidden" name="filter" value="{{ status_filter }}">
+                <input type="hidden" name="sort" value="{{ sort_by }}">
+
+                <div class="edit-actions">
+                    <a class="ghost-btn link-btn" href="{{ url_for('home', filter=status_filter, sort=sort_by) }}">Cancel</a>
+                    <button type="submit" class="primary-btn">Save Changes</button>
+                </div>
+            </form>
+        </section>
+    </main>
+</body>
+</html>

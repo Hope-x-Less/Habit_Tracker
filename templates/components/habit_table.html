@@ -1,0 +1,34 @@
+{% macro HabitTable(tasks, week_dates, week_labels, today_iso) -%}
+    <div class="habit-table-wrap">
+        <table class="habit-table" aria-label="Weekly accomplishment table">
+            <thead>
+                <tr>
+                    <th>Task</th>
+                    {% for idx in range(week_dates|length) %}
+                        {% set iso_date = week_dates[idx] %}
+                        {% set day_label = week_labels[idx] %}
+                        <th class="{{ 'is-today' if iso_date == today_iso else '' }}" title="{{ iso_date }}">{{ day_label }}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% if tasks %}
+                    {% for task in tasks %}
+                        {% set completions = task.get('completions', {}) %}
+                        <tr>
+                            <td class="habit-table-task">{{ task.name }}</td>
+                            {% for iso_date in week_dates %}
+                                {% set done = completions.get(iso_date, false) %}
+                                <td class="habit-table-cell {{ 'is-today' if iso_date == today_iso else '' }}" title="{{ iso_date }}" data-done="{{ 'true' if done else 'false' }}">{{ '✅' if done else '⬜' }}</td>
+                            {% endfor %}
+                        </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td class="habit-table-empty" colspan="{{ week_dates|length + 1 }}">No habits available for this view.</td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+{%- endmacro %}

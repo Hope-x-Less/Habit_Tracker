@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Habit Tracker</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    {% from "components/habit_table.html" import HabitTable %}
+    <main class="page-shell">
+        <header class="app-header">
+            <div>
+                <p class="eyebrow">Daily Consistency</p>
+                <h1>Habit Tracker</h1>
+            </div>
+            <p class="header-caption">Build momentum one day at a time.</p>
+        </header>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <section class="flash-stack" aria-live="polite">
+                    {% for category, message in messages %}
+                        <div class="flash-message flash-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                </section>
+            {% endif %}
+        {% endwith %}
+
+        <section class="add-card">
+            <div class="section-head">
+                <h2>Add Habit</h2>
+            </div>
+            <form class="add-habit-form" action="{{ url_for('add_habit') }}" method="post">
+                <div class="field">
+                    <label for="name">Habit Name</label>
+                    <input id="name" name="name" type="text" placeholder="Morning walk" required>
+                </div>
+
+                <div class="field field-wide">
+                    <label for="description">Description</label>
+                    <textarea id="description" name="description" rows="3" placeholder="30 minutes before work"></textarea>
+                </div>
+
+                <input type="hidden" name="filter" value="{{ status_filter }}">
+                <input type="hidden" name="sort" value="{{ sort_by }}">
+
+                <button type="submit" class="primary-btn">Add Habit</button>
+            </form>
+        </section>
+
+        <section class="chart-card">
+            <div class="section-head">
+                <h2>Weekly Progress</h2>
+                <div style="display:flex;align-items:center;gap:10px">
+                    <div class="week-nav">
+                        <a class="nav-btn ghost-btn" href="{{ url_for('home', week=prev_week, filter=status_filter, sort=sort_by) }}">← Prev</a>
+                        <a class="nav-btn ghost-btn" href="{{ url_for('home', week=next_week, filter=status_filter, sort=sort_by) }}">Next →</a>
+                    </div>
+                    <span class="count-pill">{{ weekly_chart.start_date }} to {{ weekly_chart.end_date }}</span>
+                </div>
+            </div>
+            <div class="chart-wrap">
+                <canvas id="weeklyProgressChart" aria-label="Weekly progress chart"></canvas>
+            </div>
+        </section>
+
+        <section class="weekly-summary-card">
+            <div class="section-head">
+                <h2>Weekly Summary</h2>
+            </div>
+            <div class="weekly-summary">
+                <div><strong>This week:</strong> {{ weekly_chart.total_this_week }}</div>
+                <div><strong>Last week:</strong> {{ weekly_chart.total_prev_week }}</div>
+                <div><strong>Change:</strong>
+                    {% if weekly_chart.percent_change is not none %}
+                        {{ weekly_chart.percent_change }}%
+                    {% else %}
+                        N/A
+                    {% endif %}
+                </div>
+            </div>
+        </section>
+
+        <section class="list-section">
+            <div class="list-toolbar">
+                <div class="section-head">
+                    <h2>Your Habits</h2>
+                    <span class="count-pill">{{ habits|length }} shown</span>
+                </div>
+
+                <form class="list-controls" method="get" action="{{ url_for('home') }}">
+                            {% if request.args.get('week') %}
+                                <input type="hidden" name="week" value="{{ request.args.get('week') }}">
+                            {% endif %}
+                    <div class="field">
+                        <label for="filter">Filter</label>
+                        <select id="filter" name="filter">
+                            <option value="all" {% if status_filter == 'all' %}selected{% endif %}>All habits</option>
+                            <option value="completed" {% if status_filter == 'completed' %}selected{% endif %}>Completed today</option>
+                            <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>Not completed today</option>
+                        </select>
+                    </div>
+
+                    <div class="field">
+                        <label for="sort">Sort</label>
+                        <select id="sort" name="sort">
+                            <option value="newest" {% if sort_by == 'newest' %}selected{% endif %}>Newest first</option>
+                            <option value="streak" {% if sort_by == 'streak' %}selected{% endif %}>Highest streak</option>
+                        </select>
+                    </div>
+
+                    <button type="submit" class="ghost-btn controls-btn">Apply</button>
+                </form>
+            </div>
+
+            {% if habits %}
+                <div class="habit-grid">
+                    {% for habit in habits %}
+                        <article class="habit-card {{ 'is-complete' if habit.completed_today else 'is-pending' }}">
+                            <div class="habit-card-top">
+                                <div>
+                                    <h3>{{ habit.name }}</h3>
+                                    <p>{{ habit.description or 'No description yet. Add context to stay motivated.' }}</p>
+                                </div>
+                                <span class="status-chip">
+                                    {% if habit.completed_today %}
+                                        ✔ Today
+                                    {% else %}
+                                        ❌ Today
+                                    {% endif %}
+                                </span>
+                            </div>
+
+                            <div class="habit-metrics">
+                                <div class="metric">
+                                    <strong>🔥 {{ habit.current_streak }}</strong>
+                                    <small>Current streak</small>
+                                </div>
+                                <div class="metric">
+                                    <strong>{{ habit.completed_last_7_days }}</strong>
+                                    <small>Done in last 7 days</small>
+                                </div>
+                                <div class="metric">
+                                    <strong>{{ habit.total_completed }}</strong>
+                                    <small>Total done days</small>
+                                </div>
+                            </div>
+
+                            <div class="card-actions">
+                                <form action="{{ url_for('complete_habit', id=habit.id) }}" method="post">
+                                    <input type="hidden" name="filter" value="{{ status_filter }}">
+                                    <input type="hidden" name="sort" value="{{ sort_by }}">
+                                    {% if request.args.get('week') %}
+                                        <input type="hidden" name="week" value="{{ request.args.get('week') }}">
+                                    {% endif %}
+                                    <button type="submit" class="primary-btn done-btn" {% if habit.completed_today %}disabled{% endif %}>
+                                        {% if habit.completed_today %}
+                                            Done Today
+                                        {% else %}
+                                            Mark as Done
+                                        {% endif %}
+                                    </button>
+                                </form>
+
+                                <div class="secondary-actions">
+                                    <a class="ghost-btn link-btn" href="{{ url_for('edit_habit', id=habit.id, filter=status_filter, sort=sort_by) }}">Edit</a>
+
+                                    <form action="{{ url_for('delete_habit', id=habit.id) }}" method="post" onsubmit="return confirm('Delete this habit and all of its logs?');">
+                                        <input type="hidden" name="filter" value="{{ status_filter }}">
+                                        <input type="hidden" name="sort" value="{{ sort_by }}">
+                                        {% if request.args.get('week') %}
+                                            <input type="hidden" name="week" value="{{ request.args.get('week') }}">
+                                        {% endif %}
+                                        <button type="submit" class="ghost-btn">Delete</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </article>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="empty-card">
+                    <h3>No habits yet</h3>
+                    <p>Add your first habit above to start tracking your daily progress.</p>
+                </div>
+            {% endif %}
+        </section>
+
+        <section class="habit-table-section">
+            <div class="section-head">
+                <h2>Weekly Accomplishment Table</h2>
+                <span class="count-pill">{{ habit_table_week_dates | first }} to {{ habit_table_week_dates | last }}</span>
+            </div>
+
+            {{ HabitTable(habits, habit_table_week_dates, habit_table_week_labels, today_iso) }}
+        </section>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+    <script>
+        const weeklyChartPayload = {{ weekly_chart | tojson }};
+        const weeklyChartCanvas = document.getElementById("weeklyProgressChart");
+
+        if (weeklyChartCanvas) {
+            new Chart(weeklyChartCanvas, {
+                type: "bar",
+                data: {
+                    labels: weeklyChartPayload.labels,
+                    datasets: [
+                        {
+                            label: "Completed habits",
+                            data: weeklyChartPayload.counts,
+                            backgroundColor: "#76c39e",
+                            borderRadius: 10,
+                            borderSkipped: false
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                precision: 0
+                            },
+                            grid: {
+                                color: "#e3ebf4"
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            backgroundColor: "#12243a",
+                            titleColor: "#ffffff",
+                            bodyColor: "#ffffff",
+                            callbacks: {
+                                label: function(context) {
+                                    const value = context.dataset.data[context.dataIndex];
+                                    return 'Completed: ' + value;
+                                },
+                                afterBody: function(context) {
+                                    const idx = context[0].dataIndex;
+                                    const iso = weeklyChartPayload.iso_dates[idx];
+                                    const tasks = weeklyChartPayload.tasks_by_date[iso] || [];
+                                    if (tasks.length) {
+                                        const lines = ['Tasks:'];
+                                        tasks.forEach(function(t) { lines.push('- ' + t); });
+                                        return lines;
+                                    }
+                                    return ['No tasks'];
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>

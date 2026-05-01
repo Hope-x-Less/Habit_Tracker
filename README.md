@@ -107,8 +107,3 @@ pytest
 - Edit or delete habits from each habit card.
 - Review the weekly chart and weekly accomplishment table to track consistency.
 
-## Notes
-
-- The SQLite database file (`database.db`) is created/updated locally.
-- This project currently stores data locally (no external database required).
-- Keep secrets and environment-specific settings out of version control.
